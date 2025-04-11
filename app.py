@@ -5,8 +5,8 @@ import numpy as np
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-UPLOAD_FOLDER = '/static/uploads/'
-PROCESSED_FOLDER = 'static/processed/'
+UPLOAD_FOLDER = os.path.join('static', 'uploads')
+PROCESSED_FOLDER = os.path.join('static', 'processed')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
