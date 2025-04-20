@@ -20,21 +20,34 @@ def estimate_length(image_path):
 
     contours, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     lengths = []
-    
-    # Process and draw on the image
+    drawn_boxes = []  # List to store the coordinates of the drawn boxes
+
     for cnt in contours:
         x, y, w, h = cv2.boundingRect(cnt)
-        if w > 50 and h > 10:  # Filter small objects
-            lengths.append(w)
-            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-    # Define the path to save the processed image
-    filename = os.path.basename(image_path)
-    processed_path = os.path.join('static', 'processed', filename)
-    
+        # Filter small objects by width and height
+        if w > 50 and h > 10:
+            overlap_found = False
+
+            # Check for overlap with already drawn boxes
+            for (prev_x, prev_y, prev_w, prev_h) in drawn_boxes:
+                # If the current box overlaps with a previous box, don't draw it again
+                if (x < prev_x + prev_w and x + w > prev_x and 
+                    y < prev_y + prev_h and y + h > prev_y):
+                    overlap_found = True
+                    break
+            
+            # If no overlap is found, draw the box and add it to the list of drawn boxes
+            if not overlap_found:
+                lengths.append(w)
+                cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                drawn_boxes.append((x, y, w, h))
+
     # Save the processed image
+    filename = os.path.basename(image_path)
+    processed_path = os.path.join(PROCESSED_FOLDER, filename)
     cv2.imwrite(processed_path, image)
-    
+
     return processed_path, lengths
 
 
@@ -68,10 +81,6 @@ def upload_file():
     """
 
 
-
-    
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))  # Render sets this dynamically
     app.run(host='0.0.0.0', port=port)
-
