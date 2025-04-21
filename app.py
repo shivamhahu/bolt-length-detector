@@ -15,40 +15,39 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 def estimate_length(image_path):
     image = cv2.imread(image_path)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (7, 7), 0)
-    edged = cv2.Canny(blur, 50, 150)
 
-    contours, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Blur + Edge Detection
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    edged = cv2.Canny(blur, 30, 100)
+
+    # Dilation to close gaps
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    dilated = cv2.dilate(edged, kernel, iterations=1)
+
+    # Find contours
+    contours, _ = cv2.findContours(dilated.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     lengths = []
-    drawn_boxes = []  # List to store the coordinates of the drawn boxes
+    drawn_boxes = []
 
     for cnt in contours:
         x, y, w, h = cv2.boundingRect(cnt)
+        area = w * h
 
-        # Filter small objects by width and height
-        if w > 50 and h > 10:
-            overlap_found = False
+        # Filter only very small noise (allow overlaps!)
+        if area > 500 and w > 30 and h > 10:
+            lengths.append(w)
+            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            drawn_boxes.append((x, y, w, h))
 
-            # Check for overlap with already drawn boxes
-            for (prev_x, prev_y, prev_w, prev_h) in drawn_boxes:
-                # If the current box overlaps with a previous box, don't draw it again
-                if (x < prev_x + prev_w and x + w > prev_x and 
-                    y < prev_y + prev_h and y + h > prev_y):
-                    overlap_found = True
-                    break
-            
-            # If no overlap is found, draw the box and add it to the list of drawn boxes
-            if not overlap_found:
-                lengths.append(w)
-                cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                drawn_boxes.append((x, y, w, h))
-
-    # Save the processed image
+    # Save processed image
     filename = os.path.basename(image_path)
     processed_path = os.path.join(PROCESSED_FOLDER, filename)
     cv2.imwrite(processed_path, image)
 
     return processed_path, lengths
+
+
+
 
 
 @app.route('/')
